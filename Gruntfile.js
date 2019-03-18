@@ -30,7 +30,7 @@ var previewBuilder = require('./libs/preview-builder.js');
 var domainMapper = require('./libs/domain-mapper.js');
 var timeoutWorker = require('./libs/timeout-worker.js');
 
-module.exports = function(grunt) {
+module.exports = function (grunt) {
   // Project configuration.
   grunt.initConfig({
     firebase: {
@@ -63,75 +63,75 @@ module.exports = function(grunt) {
         email: process.env.CLOUDFLARE_EMAIL,
         key: process.env.CLOUDFLARE_KEY,
       },
-      domains: parseJson( process.env.CLOUDFLARE_DOMAINS, [] ),
+      domains: parseJson(process.env.CLOUDFLARE_DOMAINS, []),
     },
     builder: {
       forceWrite: process.env.BUILDER_FORCE_WRITE || false,
-      maxParallel: concurrencyOption( process.env.BUILDER_MAX_PARALLEL ),
+      maxParallel: concurrencyOption(process.env.BUILDER_MAX_PARALLEL),
     },
     fastly: {
       token: process.env.FASTLY_TOKEN,
       service_id: process.env.FASTLY_SERVICE_ID,
-      domains: parseJson( process.env.FASTLY_DOMAINS, [] ),
+      domains: parseJson(process.env.FASTLY_DOMAINS, []),
     },
-    developmentDomain: process.env.DEVELOPMENT_DOMAIN.split( ',' ),
+    developmentDomain: process.env.DEVELOPMENT_DOMAIN.split(','),
   });
 
-  grunt.registerTask('commandDelegator', 'Worker that handles creating new sites', function() {
+  grunt.registerTask('commandDelegator', 'Worker that handles creating new sites', function () {
     var done = this.async();
     var d = delegator.start(grunt.config, grunt.log);
     d.on('ready', console.log)
   });
 
-  grunt.registerTask('buildWorker', 'Worker that handles building sites', function() {
+  grunt.registerTask('buildWorker', 'Worker that handles building sites', function () {
     var done = this.async();
     builder.start(grunt.config, grunt.log);
   });
 
   grunt.registerTask('previewBuildWorker', 'Worker that builds an individual template for the given contentType & itemKey.', function () {
     var done = this.async();
-    previewBuilder.start( grunt.config, grunt.log );
+    previewBuilder.start(grunt.config, grunt.log);
   });
 
   grunt.registerTask('domainMapper', 'Worker that updates domain mappings within fastly.', function () {
     var done = this.async();
-    domainMapper.start( grunt.config, grunt.log );
-  } )
+    domainMapper.start(grunt.config, grunt.log);
+  })
 
-  grunt.registerTask('siteIndexWorker', 'Worker that handles synchronizing a site Firebase data with its Elastic Search index.', function() {
+  grunt.registerTask('siteIndexWorker', 'Worker that handles synchronizing a site Firebase data with its Elastic Search index.', function () {
     var done = this.async();
     siteIndexer.start(grunt.config, grunt.log);
   });
 
-  grunt.registerTask('redirectsWorker', 'Worker that handles synchronizing a site Firebase redirect settings with its Fastly service.', function() {
+  grunt.registerTask('redirectsWorker', 'Worker that handles synchronizing a site Firebase redirect settings with its Fastly service.', function () {
     var done = this.async();
     redirects.start(grunt.config, grunt.log);
   });
 
-  grunt.registerTask('inviteWorker', 'Worker that handles inviting team members', function() {
+  grunt.registerTask('inviteWorker', 'Worker that handles inviting team members', function () {
     var done = this.async();
     inviter.start(grunt.config, grunt.log);
   });
 
-  grunt.registerTask('createWorker', 'Worker that handles creating new sites', function() {
+  grunt.registerTask('createWorker', 'Worker that handles creating new sites', function () {
     var done = this.async();
     creator.start(grunt.config, grunt.log);
   });
 
-  grunt.registerTask('startServer', 'Starts node server', function() {
+  grunt.registerTask('startServer', 'Starts node server', function () {
     var done = this.async();
     server.start(grunt.config, grunt.log);
   });
 
-  grunt.registerTask('backupCron', 'Job to run for backup cron', function() {
+  grunt.registerTask('backupCron', 'Job to run for backup cron', function () {
     var done = this.async();
     backup.start(grunt.config, grunt.log);
   });
 
-  grunt.registerTask('extractKey', 'Extract RSA key from JSON file', function() {
+  grunt.registerTask('extractKey', 'Extract RSA key from JSON file', function () {
     var done = this.async();
     var file = grunt.option('file');
-    extractKey.start(file, grunt.config, grunt.log);
+    extractKey.start('gcloud.json', grunt.config, grunt.log);
   });
 
   grunt.registerTask('timeoutWorker', 'Timeout in order to test proper queue management.', function () {
@@ -146,22 +146,22 @@ module.exports = function(grunt) {
   })
 
   grunt.registerTask('echoConfig', 'Logs out the current config object.', function () {
-    console.log( grunt.config() )
+    console.log(grunt.config())
   });
 
 };
 
 // concurrency option value defaults to half the available cpus
-function concurrencyOption ( concurrencyOptionValue ) {
-  if ( typeof concurrencyOptionValue === 'number' ) return Math.floor( concurrencyOptionValue )
-  if ( concurrencyOptionValue === 'max' ) return require('os').cpus().length;
+function concurrencyOption(concurrencyOptionValue) {
+  if (typeof concurrencyOptionValue === 'number') return Math.floor(concurrencyOptionValue)
+  if (concurrencyOptionValue === 'max') return require('os').cpus().length;
   return require('os').cpus().length / 2;
 }
 
-function parseJson ( value, defaultValue ) {
+function parseJson(value, defaultValue) {
   try {
-    return JSON.parse( value )
-  } catch ( error ) {
+    return JSON.parse(value)
+  } catch (error) {
     return defaultValue
   }
 }
