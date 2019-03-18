@@ -29,10 +29,10 @@ module.exports.start = function (config, logger) {
 
   // Wait for jobs
   jobQueue.reserveJob('mail', 'mail', function (payload, identifier, data, client, callback) {
-    var fromEmail = payload.from;
-    var toEmail = payload.to;
-    var subject = payload.subject;
-    var message = payload.message;
+    var fromEmail = data.from;
+    var toEmail = data.to;
+    var subject = data.subject;
+    var message = data.message;
 
     sendMail(toEmail, fromEmail, subject, message);
     callback();
