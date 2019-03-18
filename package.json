@@ -15,6 +15,7 @@
     "preview-build-worker": "grunt previewBuildWorker",
     "timeout-worker": "grunt timeoutWorker",
     "backup-cron": "grunt backupCron",
+    "mail-worker": "grunt mailWorker",
     "extract-key": "grunt extractKey",
     "flush-build-queue": "grunt flushBuildQueue",
     "dev": "nf start --procfile=Procfile.dev"

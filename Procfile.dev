@@ -10,3 +10,4 @@ preview_build_worker: npm run preview-build-worker
 redirects_worker: npm run redirects-worker
 timeout_worker: npm run timeout-worker
 domain_mapper: npm run domain-mapper
+mail_worker: npm run mail-worker
