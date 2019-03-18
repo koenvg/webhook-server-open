@@ -29,10 +29,12 @@ var extractKey = require('./libs/extractKey.js');
 var previewBuilder = require('./libs/preview-builder.js');
 var domainMapper = require('./libs/domain-mapper.js');
 var timeoutWorker = require('./libs/timeout-worker.js');
+var mailer = require('./libs/mail.js');
 
 module.exports = function (grunt) {
   // Project configuration.
   grunt.initConfig({
+    sendGridKey: process.env.SEND_GRID_KEY,
     firebase: {
       name: process.env.FIREBASE,                                           // The name of your firebase
       serviceAccountKey: process.env.FIREBASE_SERVICE_ACCOUNT_KEY,          // Your firebase's service account key
@@ -148,6 +150,12 @@ module.exports = function (grunt) {
   grunt.registerTask('echoConfig', 'Logs out the current config object.', function () {
     console.log(grunt.config())
   });
+
+  grunt.registerTask('mailWorker', 'Worker that handles sending out mails', function () {
+    var done = this.async();
+    mailer.start(grunt.config, grunt.log);
+  });
+
 
 };
 

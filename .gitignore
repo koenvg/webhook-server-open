@@ -22,3 +22,4 @@ service-accounts
 beanstalk
 
 gcloud.json
+firebase.json

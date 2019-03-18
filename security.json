@@ -154,6 +154,15 @@
                 }
               }
             },
+            "mail": {
+              "$command": {
+                ".write": true,
+                ".validate": "newData.hasChildren(['from', 'to', 'message','subject'])",
+                "id": {
+                  ".validate": true
+                }
+              }
+            },
             "build" : {
               "$command" : {
                 ".read": "data.child('userid').val() == auth.email",

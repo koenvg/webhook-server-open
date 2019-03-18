@@ -24,6 +24,7 @@
     "npm": "^5.6.0"
   },
   "dependencies": {
+    "@sendgrid/mail": "^6.3.1",
     "adm-zip": "~0.4.3",
     "archiver": "~0.10.0-alpha",
     "async": "~0.2.9",
