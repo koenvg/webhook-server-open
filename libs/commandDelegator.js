@@ -16,11 +16,11 @@ var async = require('async');
 var beanstalkd = require('./node-beanstalkd.js');
 var cloudStorage = require('./cloudStorage.js');
 var Memcached = require('memcached');
-var Deploys = require( 'webhook-deploy-configuration' )
-var miss = require( 'mississippi' )
+var Deploys = require('webhook-deploy-configuration')
+var miss = require('mississippi')
 var jobLifetime = require('./jobQueue.js').jobLifetime;
 
-var escapeUserId = function(userid) {
+var escapeUserId = function (userid) {
   return userid.replace(/\./g, ',1');
 };
 
@@ -29,9 +29,9 @@ var dieSoon = false;
 
 // Handle SIGTERM gracefully exit when command done processing
 // useful for easy supervisor restart without losing data
-process.on('SIGTERM', function() {
+process.on('SIGTERM', function () {
 
-  if(handlingCommand === 0) {
+  if (handlingCommand === 0) {
     process.exit(0);
   } else {
     dieSoon = true;
@@ -45,9 +45,9 @@ process.on('SIGTERM', function() {
  */
 module.exports.start = CommandDelegator;
 
-function CommandDelegator (config, logger) {
-  if ( ! ( this instanceof CommandDelegator ) ) return new CommandDelegator( config, logger )
-  events.EventEmitter.call( this )
+function CommandDelegator(config, logger) {
+  if (!(this instanceof CommandDelegator)) return new CommandDelegator(config, logger)
+  events.EventEmitter.call(this)
 
   cloudStorage.setProjectName(config.get('googleProjectId'));
   cloudStorage.setServiceAccount(config.get('googleServiceAccount'));
@@ -57,11 +57,11 @@ function CommandDelegator (config, logger) {
   var self = this;
 
   // project::firebase::initialize::done
-  var firebase = Firebase( config().firebase )
+  var firebase = Firebase(config().firebase)
   this.root = firebase.database()
 
   // project::firebase::deploys-integration::done
-  var deploys = Deploys( this.root )
+  var deploys = Deploys(this.root)
 
   // Where in firebase we look for commands, plus the name of the locks we use in memcached
   var commandUrls = [
@@ -75,6 +75,7 @@ function CommandDelegator (config, logger) {
     { command: 'management/commands/previewBuild/', lock: 'previewBuild', tube: 'previewBuild' },
     { command: 'management/commands/redirects/', lock: 'redirects', tube: 'redirects' },
     { command: 'management/commands/domainMap/', lock: 'domainMap', tube: 'domainMap' },
+    { command: 'management/commands/mail/', lock: 'mail', tube: 'mail' },
   ];
 
   var commandHandlersStore = commandHandlersInterface();
@@ -82,66 +83,66 @@ function CommandDelegator (config, logger) {
   // For each command we listen on a seperate tube and firebase url
   console.log('Starting clients'.red);
 
-  var commandTasks = commandUrls.map( connectionForCommandTasks );
+  var commandTasks = commandUrls.map(connectionForCommandTasks);
 
-  async.parallel( commandTasks, onCommandHandlers )
+  async.parallel(commandTasks, onCommandHandlers)
 
   return this;
 
-  function onCommandHandlers ( error, commandHandlers ) {
-    if ( error ) {
-      return self.emit( 'error', error )
+  function onCommandHandlers(error, commandHandlers) {
+    if (error) {
+      return self.emit('error', error)
     }
-    commandHandlers.forEach( commandHandlersStore.add )
+    commandHandlers.forEach(commandHandlersStore.add)
 
-    self.emit( 'ready', commandHandlersStore.external() )
+    self.emit('ready', commandHandlersStore.external())
   }
 
-  function connectionForCommandTasks ( item ) {
-    return function task ( onConnectionMade ) {
+  function connectionForCommandTasks(item) {
+    return function task(onConnectionMade) {
       // Seperate client per command
       var client = new beanstalkd.Client();
-      client.connect(config.get('beanstalkServer'), function(err, conn) {
-        if(err) {
+      client.connect(config.get('beanstalkServer'), function (err, conn) {
+        if (err) {
           console.log(err);
-          return onConnectionMade( err )
+          return onConnectionMade(err)
         }
-        conn.use(item.tube, function(err, tubename) {
-          if(err) {
+        conn.use(item.tube, function (err, tubename) {
+          if (err) {
             console.log(err);
-            return onConnectionMade( err )
+            return onConnectionMade(err)
           }
           var memcachedCommandHandler = handleCommands(conn, item);
-          onConnectionMade( null,  Object.assign( { memcachedCommandHandler: memcachedCommandHandler }, item ) )
+          onConnectionMade(null, Object.assign({ memcachedCommandHandler: memcachedCommandHandler }, item))
         });
       });
-      
-      client.on('close', function(err) {
+
+      client.on('close', function (err) {
         console.log('Closed connection');
-        return onConnectionMade( err )
+        return onConnectionMade(err)
       });
     }
   }
 
-  function commandHandlersInterface () {
+  function commandHandlersInterface() {
     var handlers = {};
-    
-    var add = function ( command ) {
-      handlers[ command.tube ] = command;
+
+    var add = function (command) {
+      handlers[command.tube] = command;
     }
 
-    var queueMemcached = function ( toQueue ) {
+    var queueMemcached = function (toQueue) {
       try {
-        handlers[ toQueue.tube ].memcachedCommandHandler( toQueue.data )
-      } catch ( error ) {
+        handlers[toQueue.tube].memcachedCommandHandler(toQueue.data)
+      } catch (error) {
         throw error;
       }
     }
 
-    var queueFirebase = function ( toQueue, callback ) {
-      if ( typeof callback !== 'function' ) callback = function noop () {}
+    var queueFirebase = function (toQueue, callback) {
+      if (typeof callback !== 'function') callback = function noop() { }
 
-      self.root.ref( handlers[ toQueue.tube ].command ).push().set( toQueue.data, callback )
+      self.root.ref(handlers[toQueue.tube].command).push().set(toQueue.data, callback)
     }
 
     var external = function () {
@@ -174,10 +175,10 @@ function CommandDelegator (config, logger) {
 
     var LOCKED = 'locked'
 
-    console.log( 'lock-job' )
-    console.log( lockId )
+    console.log('lock-job')
+    console.log(lockId)
 
-    memcached.add(lockId, LOCKED, jobLifetime, function(err) {
+    memcached.add(lockId, LOCKED, jobLifetime, function (err) {
       if (err) {
         // job is already in the queue
         console.log('memcached:add:err')
@@ -187,14 +188,14 @@ function CommandDelegator (config, logger) {
         // priority, delay, time to run
         client.put(1, 0, jobLifetime,
           JSON.stringify({ identifier: identifier, payload: payload }),
-          function(err) { callback(err); });
+          function (err) { callback(err); });
       }
     });
   };
 
   // After creating a client we listen in firebase for jobs,
   // as jobs are added we queue them up ten listen again.
-  function handleCommands(client, item) { 
+  function handleCommands(client, item) {
     console.log('Waiting on commands for ' + item.tube);
 
     // project::firebase::ref::done
@@ -203,11 +204,11 @@ function CommandDelegator (config, logger) {
 
     return handleCommandData;
 
-    function onCommandSnapshot ( snapshot ) {
+    function onCommandSnapshot(snapshot) {
 
       var payload = snapshot.val();
       var identifier = snapshot.key;
-      
+
       // We remove the data immediately to avoid duplicates
       // project::firebase::ref::done
       // project::firebase::child::done
@@ -219,18 +220,18 @@ function CommandDelegator (config, logger) {
         identifier: identifier,
       }
 
-      return handleCommandData( commandData );
+      return handleCommandData(commandData);
 
     }
 
-    function onCommandSnapshotError (err) {
+    function onCommandSnapshotError(err) {
       console.log(err);
     }
 
-    function handleCommandData ( commandData ) {
-      console.log( 'commandData:start' )
-      console.log( commandData )
-      console.log( 'commandData:end' )
+    function handleCommandData(commandData) {
+      console.log('commandData:start')
+      console.log(commandData)
+      console.log('commandData:end')
 
       var payload = commandData.payload;
       var identifier = commandData.identifier;
@@ -238,83 +239,83 @@ function CommandDelegator (config, logger) {
       var lockId = payload.id || 'noneya';
       var memcacheLockId = item.lock + '_' + lockId + '_queued';
 
-      if ( item.tube === 'build' ) {
+      if (item.tube === 'build') {
         // lock id should be site name and site branch
         // since the branch is linked to the zip file that
         // gets used to build the site
         // if no branch is defined, then queue a command for
         // each of the branches
-        deploys.get( { siteName: payload.sitename }, function ( error, configuration ) {
-          if ( error ) {
-            console.log( error )
+        deploys.get({ siteName: payload.sitename }, function (error, configuration) {
+          if (error) {
+            console.log(error)
             return;
           }
 
-          if ( payload.siteBucket ) {
-            var siteBuckets = [ payload.siteBucket ]
+          if (payload.siteBucket) {
+            var siteBuckets = [payload.siteBucket]
           }
-          else if ( payload.branch ) {
+          else if (payload.branch) {
             var siteBuckets = configuration.deploys
-              .filter( function ( deploy ) { return deploy.branch === payload.branch } )
-              .map( function ( deploy ) { return deploy.bucket } )
+              .filter(function (deploy) { return deploy.branch === payload.branch })
+              .map(function (deploy) { return deploy.bucket })
           }
           else {
-            var siteBuckets = configuration.deploys.map( function ( deploy ) { return deploy.bucket } )
+            var siteBuckets = configuration.deploys.map(function (deploy) { return deploy.bucket })
           }
 
-          siteBuckets = _.uniq( siteBuckets )
+          siteBuckets = _.uniq(siteBuckets)
 
-          return siteBuckets.map( toBuildCommandArgs ).forEach( queueCommandForArgs )
+          return siteBuckets.map(toBuildCommandArgs).forEach(queueCommandForArgs)
 
-          function toBuildCommandArgs ( siteBucket ) {
-            var identifier = Deploys.utilities.nameForSiteBranch( payload.sitename, siteBucket )
-            var memcacheLockId = [ item.lock, identifier, 'queued' ].join( '_' )
-            var deploysForBuild = configuration.deploys.filter( function ( deploy ) { return deploy.bucket === siteBucket } )
+          function toBuildCommandArgs(siteBucket) {
+            var identifier = Deploys.utilities.nameForSiteBranch(payload.sitename, siteBucket)
+            var memcacheLockId = [item.lock, identifier, 'queued'].join('_')
+            var deploysForBuild = configuration.deploys.filter(function (deploy) { return deploy.bucket === siteBucket })
             var payloadArgs = {
               siteBucket: siteBucket,
-              branch: deploysForBuild[ 0 ].branch,
+              branch: deploysForBuild[0].branch,
             }
             return {
               identifier: identifier,
               memcacheLockId: memcacheLockId,
-              payload: Object.assign( {}, payload, payloadArgs ),
+              payload: Object.assign({}, payload, payloadArgs),
             }
           }
-        } )
+        })
 
-      } else if ( item.tube ==='previewBuild' ) {
+      } else if (item.tube === 'previewBuild') {
 
         // preview builds piggy back on regular build signals
-        if ( payload.contentType && payload.itemKey ) {
-          deploys.get( { siteName: payload.sitename }, function ( error, configuration ) {
-            if ( error ) {
-              console.log( error )
+        if (payload.contentType && payload.itemKey) {
+          deploys.get({ siteName: payload.sitename }, function (error, configuration) {
+            if (error) {
+              console.log(error)
               return;
             }
 
-            var siteBuckets = configuration.deploys.map( function ( deploy ) { return deploy.bucket } )
-            siteBuckets = _.uniq( siteBuckets )
-            
-            return siteBuckets.map( toPreviewBuildArgs ).forEach( queueCommandForArgs )
+            var siteBuckets = configuration.deploys.map(function (deploy) { return deploy.bucket })
+            siteBuckets = _.uniq(siteBuckets)
 
-            function toPreviewBuildArgs ( siteBucket ) {
-              var previewIdentifier = [ payload.sitename, siteBucket, payload.contentType, payload.itemKey ].join( '_' )
-              var memcacheLockId = [ 'previewBuild', previewIdentifier, 'queued' ].join( '_' )
+            return siteBuckets.map(toPreviewBuildArgs).forEach(queueCommandForArgs)
+
+            function toPreviewBuildArgs(siteBucket) {
+              var previewIdentifier = [payload.sitename, siteBucket, payload.contentType, payload.itemKey].join('_')
+              var memcacheLockId = ['previewBuild', previewIdentifier, 'queued'].join('_')
               return {
                 identifier: previewIdentifier,
                 memcacheLockId: memcacheLockId,
-                payload: Object.assign( { siteBucket: siteBucket }, payload )
+                payload: Object.assign({ siteBucket: siteBucket }, payload)
               }
             }
 
-          } )
+          })
         }
       } else {
         var queueCommandArgs = { identifier: identifier, memcacheLockId: memcacheLockId, payload: payload }
-        return queueCommandForArgs( queueCommandArgs )
+        return queueCommandForArgs(queueCommandArgs)
       }
 
-      function queueCommandForArgs ( args ) {
+      function queueCommandForArgs(args) {
         var identifier = args.identifier;
         var memcacheLockId = args.memcacheLockId;
         var payload = args.payload;
@@ -334,9 +335,9 @@ function CommandDelegator (config, logger) {
 
         queueCommand(client, item, identifier, memcacheLockId, payload, onQueueComplete);
 
-        function onQueueComplete (error) {
+        function onQueueComplete(error) {
           if (error) {
-            console.log( error )
+            console.log(error)
             console.log('command not queued');
           } else {
             console.log('command queued')
@@ -349,9 +350,9 @@ function CommandDelegator (config, logger) {
           })
         }
 
-        function maybeDie () {
+        function maybeDie() {
           // If we had a sigterm and no one is handling commands, die
-          if(dieSoon && (handlingCommand === 0)) {
+          if (dieSoon && (handlingCommand === 0)) {
             process.exit(0);
           }
         }
@@ -364,6 +365,6 @@ function CommandDelegator (config, logger) {
 
 }
 
-util.inherits( CommandDelegator, events.EventEmitter )
+util.inherits(CommandDelegator, events.EventEmitter)
 
-function isNotFalse ( datum ) { return datum !== false }
+function isNotFalse(datum) { return datum !== false }
