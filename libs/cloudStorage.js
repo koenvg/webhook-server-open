@@ -17,8 +17,10 @@ var projectName = process.env.GOOGLE_PROJECT_ID || '';
 var googleServiceAccount = process.env.GOOGLE_SERVICE_ACCOUNT || '';
 
 // Contains google service accounts SSH key
-var keyFile = process.env.GOOGLE_KEY_FILE || 'libs/keyfile.key';
-console.log('KeyFile location:', keyFile);
+var gCloudConfigLocation = process.env.GOOGLE_KEY_FILE || 'libs/keyfile.key';
+const gCloudConfig = require(gCloudConfigLocation);
+
+console.log('KeyFile location:', gCloudConfig);
 
 /* 
 * Refreshes the token used to access google cloud storage
@@ -29,7 +31,7 @@ var refreshToken = function (callback) {
   var gapi = new GAPI({
     iss: googleServiceAccount,
     scope: 'https://www.googleapis.com/auth/devstorage.full_control https://www.googleapis.com/auth/siteverification',
-    keyFile: keyFile,
+    key: gCloudConfig.private_key,
   }, function (err) {
     if (err) { console.log(err); process.exit(1); }
 
