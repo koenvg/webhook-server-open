@@ -8,7 +8,7 @@
 var request = require('request');
 var GAPI = require('gapitoken');
 var mime = require('mime');
-var fs   = require('fs');
+var fs = require('fs');
 var zlib = require('zlib');
 var async = require('async');
 
@@ -18,26 +18,27 @@ var googleServiceAccount = process.env.GOOGLE_SERVICE_ACCOUNT || '';
 
 // Contains google service accounts SSH key
 var keyFile = process.env.GOOGLE_KEY_FILE || 'libs/keyfile.key';
+console.log('KeyFile location:', keyFile);
 
 /* 
 * Refreshes the token used to access google cloud storage
 *
 * @param callback Callback to call when refreshed
 */
-var refreshToken = function(callback) {
+var refreshToken = function (callback) {
   var gapi = new GAPI({
-      iss: googleServiceAccount,
-      scope: 'https://www.googleapis.com/auth/devstorage.full_control https://www.googleapis.com/auth/siteverification',
-      keyFile: keyFile,
-  }, function(err) {
-     if (err) { console.log(err); process.exit(1); }
+    iss: googleServiceAccount,
+    scope: 'https://www.googleapis.com/auth/devstorage.full_control https://www.googleapis.com/auth/siteverification',
+    keyFile: keyFile,
+  }, function (err) {
+    if (err) { console.log(err); process.exit(1); }
 
-     gapi.getToken(function(err, token) {
-        if (err) { return console.log(err); }
-        oauthToken = token;
+    gapi.getToken(function (err, token) {
+      if (err) { return console.log(err); }
+      oauthToken = token;
 
-        callback(err, token);
-     });     
+      callback(err, token);
+    });
   });
 };
 
@@ -47,10 +48,9 @@ var refreshToken = function(callback) {
 * @param options  Object of options to pass to the json request, mostly same options passed to request module
 * @param callback Callback to call when finished
 */
-function jsonRequest(options, callback)  {
+function jsonRequest(options, callback) {
 
-  if(!options.qs)
-  {
+  if (!options.qs) {
     options.qs = {};
   }
 
@@ -58,15 +58,14 @@ function jsonRequest(options, callback)  {
 
   var multiData = [];
 
-  if(options.multipart)
-  {
+  if (options.multipart) {
     var index = 0;
-    options.multipart.forEach(function(multi) {
-      multiData.push({ index: index, body: multi.body});
+    options.multipart.forEach(function (multi) {
+      multiData.push({ index: index, body: multi.body });
       index = index + 1;
     });
   }
-  
+
   var reqOptions = {
     url: options.url,
     qs: options.qs || null,
@@ -76,81 +75,80 @@ function jsonRequest(options, callback)  {
     multipart: options.multipart || null,
   };
 
-  if(options.binary) {
+  if (options.binary) {
     reqOptions['encoding'] = null;
   }
 
   // If the request wants to have a stream back ignore token, the caller is
   // responsible for making sure a token is active
-  if(options.stream) {
+  if (options.stream) {
     return request(reqOptions);
   } else {
-    request(reqOptions, 
-    function(err, res, body){
-      if(err) {
-        callback(err, null);
-      } else if (!res) {
-        callback(500, null);
-      } else if(res.statusCode/100 === 2) {
-        callback(null, body);
-      } else if(res.statusCode === 401) {
-        refreshToken(function( error ) {
-          if ( error ) return callback( error )
-          if(options.multipart)
-          {
-            multiData.forEach(function(item) {
-              options.multipart[item.index].body = item.body;
-            });
-          }
+    request(reqOptions,
+      function (err, res, body) {
+        if (err) {
+          callback(err, null);
+        } else if (!res) {
+          callback(500, null);
+        } else if (res.statusCode / 100 === 2) {
+          callback(null, body);
+        } else if (res.statusCode === 401) {
+          refreshToken(function (error) {
+            if (error) return callback(error)
+            if (options.multipart) {
+              multiData.forEach(function (item) {
+                options.multipart[item.index].body = item.body;
+              });
+            }
 
-          jsonRequest(options, callback);
-        });
-      } else {
-        callback(res.statusCode, null);
-      }
-   });
+            jsonRequest(options, callback);
+          });
+        } else {
+          callback(res.statusCode, null);
+        }
+      });
   }
 }
 
 // Sets the google project name we authenticate against
-module.exports.setProjectName = function(project) {
+module.exports.setProjectName = function (project) {
   projectName = project;
 }
 
 // Sets the google service account email with authenticate with
-module.exports.setServiceAccount = function(account) {
+module.exports.setServiceAccount = function (account) {
   googleServiceAccount = account;
 }
 
 // Manually get token, used when wanting a stream back, caller is
 // responsible for making sure token is valid
-module.exports.getToken = function(callback) {
+module.exports.getToken = function (callback) {
   refreshToken(callback);
 };
 
 // Init, manually refreshes the token before we do any requests
 // just to get things started
-module.exports.init = function(callback) {
+module.exports.init = function (callback) {
   refreshToken(callback);
 }
 
 // Sets the key file file, not curretly used
-module.exports.setKeyFile = function(file) {
+module.exports.setKeyFile = function (file) {
   keyFile = file;
 }
 
 // This object contains all methods that have to do with manipulating
 // buckets
 var cors = [{
-  origin: [ "*.risd.systems", "cdn.risd.systems", "risd.edu", "*.risd.edu", "localhost" ],
-  responseHeader: [ "Content-Type" ],
-  method: [ "GET", "HEAD", "OPTIONS" ],
+  origin: ["*.risd.systems", "cdn.risd.systems", "risd.edu", "*.risd.edu", "localhost"],
+  responseHeader: ["Content-Type"],
+  method: ["GET", "HEAD", "OPTIONS"],
   maxAgeSeconds: 3600
 }]
 
 var bucketsAPI = {
   // Get a bucket's meta data from google cloud storage
-  get: function(bucketName, callback) {
+  get: function (bucketName, callback) {
 
     jsonRequest({
       url: 'https://www.googleapis.com/storage/v1/b/' + bucketName,
@@ -159,18 +157,18 @@ var bucketsAPI = {
   },
 
   // List all buckets in the project
-  list: function(callback) {
+  list: function (callback) {
     jsonRequest({
       url: 'https://www.googleapis.com/storage/v1/b',
       qs: {
-        'project' : projectName
+        'project': projectName
       },
       method: 'GET',
     }, callback)
   },
 
   // Create a new bucket, makes the bucket a website hosting bucket
-  create: function(bucketName, callback) {
+  create: function (bucketName, callback) {
 
     var data = {
       name: bucketName,
@@ -191,7 +189,7 @@ var bucketsAPI = {
 
   // Changes the ACLs on the bucket to allow the service account write access
   // and allow the public read access
-  updateAcls: function(bucketName, callback) {
+  updateAcls: function (bucketName, callback) {
     var data = {
       entity: 'allUsers',
       role: 'READER'
@@ -201,11 +199,11 @@ var bucketsAPI = {
       url: 'https://www.googleapis.com/storage/v1/b/' + bucketName + '/defaultObjectAcl',
       data: data,
       method: 'POST',
-    }, function() {
+    }, function () {
 
       data = {
         entity: 'user-' + projectName + '@appspot.gserviceaccount.com',
-        role:   'OWNER',
+        role: 'OWNER',
       }
 
       jsonRequest({
@@ -218,7 +216,7 @@ var bucketsAPI = {
   },
 
   // Updates the website index on the bucket, used on create
-  updateIndex: function(bucketName, indexFile, notFoundFile, callback) {
+  updateIndex: function (bucketName, indexFile, notFoundFile, callback) {
 
     var data = {
       website: {
@@ -236,7 +234,7 @@ var bucketsAPI = {
   },
 
   // Deletes an empty bucket from cloud storage
-  del: function(bucketName, callback) {
+  del: function (bucketName, callback) {
     jsonRequest({
       url: 'https://www.googleapis.com/storage/v1/b/' + bucketName,
       method: 'DELETE'
@@ -248,17 +246,17 @@ module.exports.buckets = bucketsAPI;
 
 // A collection of all functions related to manipulating objects in cloud storage
 
-var objectsAPI = { 
+var objectsAPI = {
 
   // List all objects in a bucket (name, md5hash)
-  list: function(bucket, options, callback) {
-    if ( typeof options === 'function' ) callback = options;
-    if ( !options ) options = {};
+  list: function (bucket, options, callback) {
+    if (typeof options === 'function') callback = options;
+    if (!options) options = {};
 
-    var qs = Object.assign( {
+    var qs = Object.assign({
       fields: 'kind,items(name,md5Hash),nextPageToken',
       delimiter: 'webhook-uploads/',
-    }, options )
+    }, options)
 
     jsonRequest({
       url: 'https://www.googleapis.com/storage/v1/b/' + bucket + '/o',
@@ -267,47 +265,47 @@ var objectsAPI = {
   },
 
   listAll: function (bucket, options, callback) {
-    if ( typeof options === 'function' ) callback = options;
-    if ( !options ) options = {};
+    if (typeof options === 'function') callback = options;
+    if (!options) options = {};
 
     var completeList = []
 
-    var qs = Object.assign( {
+    var qs = Object.assign({
       fields: 'kind,items(name,md5Hash),nextPageToken',
       delimiter: '',
-    }, options )
+    }, options)
 
-    objectsAPI.list( bucket, qs, handleList )
+    objectsAPI.list(bucket, qs, handleList)
 
-    function handleList ( error, results ) {
-      if ( error && error !== 404 ) return callback( error )
+    function handleList(error, results) {
+      if (error && error !== 404) return callback(error)
 
-      if ( results && results.items && Array.isArray( results.items ) ) {
-        completeList = completeList.concat( results.items )  
+      if (results && results.items && Array.isArray(results.items)) {
+        completeList = completeList.concat(results.items)
       }
 
-      if ( results && results.nextPageToken ) {
-        var nextOptions = Object.assign( qs, {
+      if (results && results.nextPageToken) {
+        var nextOptions = Object.assign(qs, {
           pageToken: results.nextPageToken,
-        } )
-        return objectsAPI.list( bucket, nextOptions, handleList )
+        })
+        return objectsAPI.list(bucket, nextOptions, handleList)
       }
 
-      callback( null, completeList )
+      callback(null, completeList)
     }
 
   },
 
   // list webhook-uploads
-  listUploads: function(bucket, options, callback) {
-    if ( typeof options === 'function' ) callback = options;
-    if ( !options ) options = {};
-    
-    var qs = Object.assign( {
+  listUploads: function (bucket, options, callback) {
+    if (typeof options === 'function') callback = options;
+    if (!options) options = {};
+
+    var qs = Object.assign({
       fields: 'kind,items(name,md5Hash),nextPageToken',
       prefix: 'webhook-uploads/',
-    }, options )
-    
+    }, options)
+
     jsonRequest({
       url: 'https://www.googleapis.com/storage/v1/b/' + bucket + '/o',
       qs: qs
@@ -315,7 +313,7 @@ var objectsAPI = {
   },
 
   // List all objects with more information (md5hash, updated time)
-  listMore: function(bucket, callback) {
+  listMore: function (bucket, callback) {
     jsonRequest({
       url: 'https://www.googleapis.com/storage/v1/b/' + bucket + '/o',
       qs: { fields: 'kind,items(name,md5Hash,updated)', delimiter: 'webhook-uploads/' }
@@ -323,7 +321,7 @@ var objectsAPI = {
   },
 
   // Copy an object
-  copy: function ( sourceBucket, sourceFile, destinationBucket, destinationFile, callback ) {
+  copy: function (sourceBucket, sourceFile, destinationBucket, destinationFile, callback) {
     jsonRequest({
       url: 'https://www.googleapis.com/storage/v1/b/' + sourceBucket + '/o/' + sourceFile + '/copyTo/b/' + destinationBucket + '/o/' + destinationFile,
       method: 'POST',
@@ -331,7 +329,7 @@ var objectsAPI = {
   },
 
   // Rewrite an object
-  rewrite: function ( sourceBucket, sourceFile, destinationBucket, destinationFile, callback ) {
+  rewrite: function (sourceBucket, sourceFile, destinationBucket, destinationFile, callback) {
     jsonRequest({
       url: 'https://www.googleapis.com/storage/v1/b/' + sourceBucket + '/o/' + sourceFile + '/rewriteTo/b/' + destinationBucket + '/o/' + destinationFile,
       method: 'POST',
@@ -339,7 +337,7 @@ var objectsAPI = {
   },
 
   // Get an object from a bucket, return stream for caller to manipulate
-  getStream: function(bucket, file) {
+  getStream: function (bucket, file) {
     return jsonRequest({
       url: 'https://www.googleapis.com/storage/v1/b/' + bucket + '/o/' + file,
       qs: { alt: 'media' },
@@ -349,7 +347,7 @@ var objectsAPI = {
   },
 
   // Get an object from a bucket
-  get: function(bucket, file, callback) {
+  get: function (bucket, file, callback) {
     jsonRequest({
       url: 'https://www.googleapis.com/storage/v1/b/' + bucket + '/o/' + file,
       qs: { alt: 'media' },
@@ -358,7 +356,7 @@ var objectsAPI = {
   },
 
   // Get an objects metadata
-  getMeta: function ( bucket, file, callback ) {
+  getMeta: function (bucket, file, callback) {
     jsonRequest({
       url: 'https://www.googleapis.com/storage/v1/b/' + bucket + '/o/' + encodeURIComponent(file),
     }, callback);
@@ -375,14 +373,14 @@ var objectsAPI = {
   * @param callback         Callback with object
   *
   */
-  upload: function(bucket, local, remote, cacheControl, overrideMimeType, callback) {
-    if(typeof cacheControl === 'function') {
+  upload: function (bucket, local, remote, cacheControl, overrideMimeType, callback) {
+    if (typeof cacheControl === 'function') {
       callback = cacheControl;
       cacheControl = null;
       overrideMimeType = null;
     }
 
-    if(typeof overrideMimeType === 'function') {
+    if (typeof overrideMimeType === 'function') {
       callback = overrideMimeType;
       overrideMimeType = null;
     }
@@ -391,30 +389,30 @@ var objectsAPI = {
       url: 'https://www.googleapis.com/upload/storage/v1/b/' + bucket + '/o',
       qs: { uploadType: 'multipart' },
       headers: {
-        'content-type' : 'multipart/form-data'
+        'content-type': 'multipart/form-data'
       },
       method: 'POST',
       multipart: [{
-          'Content-Type' : 'application/json; charset=UTF-8',
-          body: JSON.stringify({
-            name: remote,
-            cacheControl: cacheControl ? cacheControl : "max-age=0"
-          })                  
-      },{ 
-          'Content-Type' : overrideMimeType ? overrideMimeType : mime.lookup(local),
-          body: fs.readFileSync(local)
+        'Content-Type': 'application/json; charset=UTF-8',
+        body: JSON.stringify({
+          name: remote,
+          cacheControl: cacheControl ? cacheControl : "max-age=0"
+        })
+      }, {
+        'Content-Type': overrideMimeType ? overrideMimeType : mime.lookup(local),
+        body: fs.readFileSync(local)
       }]
-    }, function handleUpload ( error, results ) {
-        if ( error ) return callback( error )
-        if ( typeof results === 'string' ) {
-          try {
-            results = JSON.parse( results )
-          } catch ( e ) {
-            console.log( 'results not json' )
-          }
+    }, function handleUpload(error, results) {
+      if (error) return callback(error)
+      if (typeof results === 'string') {
+        try {
+          results = JSON.parse(results)
+        } catch (e) {
+          console.log('results not json')
         }
-        return callback( null, results )
-      } );
+      }
+      return callback(null, results)
+    });
   },
 
   /*
@@ -429,7 +427,7 @@ var objectsAPI = {
   * @param callback         Callback with object
   *
   */
-  uploadCompressed: function( options, callback ) {
+  uploadCompressed: function (options, callback) {
 
     var bucket = options.bucket;
     var local = options.local;
@@ -438,90 +436,90 @@ var objectsAPI = {
     var overrideMimeType = options.overrideMimeType;
     var compressed = options.compressed;
 
-    if ( compressed ) return doUpload( compressed, callback )
+    if (compressed) return doUpload(compressed, callback)
     else {
-      withCompressedContent( local, function ( error, compressedContent ) {
-        doUpload( compressedContent, callback )
-      } )
+      withCompressedContent(local, function (error, compressedContent) {
+        doUpload(compressedContent, callback)
+      })
     }
 
-    function withCompressedContent( local, next ) {
-      fs.readFile( local, function ( error, fileContent ) {
-        if ( error ) fileContent = local; // was not a file, but a string of the file
+    function withCompressedContent(local, next) {
+      fs.readFile(local, function (error, fileContent) {
+        if (error) fileContent = local; // was not a file, but a string of the file
 
-        zlib.gzip( fileContent, function( error, compressedContent ) {
-          next( null, compressedContent )
-        } );
-      } )
+        zlib.gzip(fileContent, function (error, compressedContent) {
+          next(null, compressedContent)
+        });
+      })
     }
 
-    function doUpload ( compressedContent, next ) {
+    function doUpload(compressedContent, next) {
       jsonRequest({
         url: 'https://www.googleapis.com/upload/storage/v1/b/' + bucket + '/o',
         qs: { uploadType: 'multipart' },
         headers: {
-          'content-type' : 'multipart/form-data'
+          'content-type': 'multipart/form-data'
         },
         method: 'POST',
         multipart: [{
-            'Content-Type' : 'application/json; charset=UTF-8',
-            body: JSON.stringify({
-              name: remote,
-              cacheControl: cacheControl ? cacheControl : "max-age=0",
-              contentEncoding: 'gzip',
-            })                  
-        },{ 
-            'Content-Type' : overrideMimeType ? overrideMimeType : mime.lookup(local),
-            body: compressedContent,
+          'Content-Type': 'application/json; charset=UTF-8',
+          body: JSON.stringify({
+            name: remote,
+            cacheControl: cacheControl ? cacheControl : "max-age=0",
+            contentEncoding: 'gzip',
+          })
+        }, {
+          'Content-Type': overrideMimeType ? overrideMimeType : mime.lookup(local),
+          body: compressedContent,
         }]
-      }, function handleUpload ( error, results ) {
-        if ( error ) return next( error )
-        if ( typeof results === 'string' ) {
+      }, function handleUpload(error, results) {
+        if (error) return next(error)
+        if (typeof results === 'string') {
           try {
-            results = JSON.parse( results )
-          } catch ( e ) {
-            console.log( 'results not json' )
+            results = JSON.parse(results)
+          } catch (e) {
+            console.log('results not json')
           }
         }
-        return next( null, results )
-      } )
+        return next(null, results)
+      })
     }
 
   },
 
   // Delete an object from bucket
-  del: function(bucket, filename, callback) {
+  del: function (bucket, filename, callback) {
     jsonRequest({
       url: 'https://www.googleapis.com/storage/v1/b/' + bucket + '/o/' + encodeURIComponent(filename),
       method: 'DELETE'
     }, callback);
   },
 
-  deleteAll: function ( bucket, callback ) {
-    objectsAPI.listAll( bucket, handleItems )
+  deleteAll: function (bucket, callback) {
+    objectsAPI.listAll(bucket, handleItems)
 
-    function handleItems ( error, items ) {
-      if ( error ) return error;
+    function handleItems(error, items) {
+      if (error) return error;
 
-      if ( items.length === 0 ) callback()
+      if (items.length === 0) callback()
 
-      var deleteTasks = items.map( itemToDeleteTask )
-      async.parallelLimit( deleteTasks, 10, handleAllDeleted )
+      var deleteTasks = items.map(itemToDeleteTask)
+      async.parallelLimit(deleteTasks, 10, handleAllDeleted)
     }
 
-    function itemToDeleteTask ( item ) {
-      return function deleteTask ( taskComplete ) {
-        objectsAPI.del( bucket, item.name, handleDelete )
+    function itemToDeleteTask(item) {
+      return function deleteTask(taskComplete) {
+        objectsAPI.del(bucket, item.name, handleDelete)
 
-        function handleDelete ( error ) {
-           if ( error >= 400 ) return taskComplete( error )
-           taskComplete();
+        function handleDelete(error) {
+          if (error >= 400) return taskComplete(error)
+          taskComplete();
         }
       }
     }
 
-    function handleAllDeleted ( error ) {
-      if ( error ) return callback( error )
+    function handleAllDeleted(error) {
+      if (error) return callback(error)
       callback()
     }
   },
