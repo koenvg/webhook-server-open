@@ -18,7 +18,7 @@ var googleServiceAccount = process.env.GOOGLE_SERVICE_ACCOUNT || '';
 
 // Contains google service accounts SSH key
 var gCloudConfigLocation = process.env.GOOGLE_KEY_FILE || 'libs/keyfile.key';
-const gCloudConfig = require(gCloudConfigLocation);
+const gCloudConfig = require('./' + gCloudConfigLocation);
 
 console.log('KeyFile location:', gCloudConfig);
 
